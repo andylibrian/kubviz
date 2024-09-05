@@ -1,0 +1,9 @@
+type: nats
+
+status:
+  class: exporter
+  stability:
+    alpha: [logs]
+  distributions: []
+  codeowners:
+    active: [andylibrian]

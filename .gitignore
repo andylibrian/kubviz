@@ -4,4 +4,4 @@ allocs.pprof
 cpu.pprof
 steps-to-test.txt
 Dockerfile-grphqlserver-build
-/vendor
+vendor
