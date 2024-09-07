@@ -1,0 +1,25 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        max_recv_msg_size_mib: 50
+        max_concurrent_streams: 100
+
+processors:
+  batch:
+
+exporters:
+  debug:
+    verbosity: detailed
+  nats:
+    token: 
+    url: nats://kubviz-client-nats:4222
+    stream_name: kubviz-otel
+
+service:
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [nats]
