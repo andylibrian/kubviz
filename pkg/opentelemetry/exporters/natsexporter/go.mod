@@ -3,9 +3,7 @@ module github.com/intelops/kubviz/pkg/opentelemetry/exporters/natsexporter
 go 1.22.0
 
 require (
-	github.com/andylibrian/otel-prototype-exporter v0.0.0-20240823094352-7bbfc003f3ac
 	github.com/nats-io/nats.go v1.37.0
-	github.com/sirupsen/logrus v1.9.3
 	go.opentelemetry.io/collector/component v0.108.1
 	go.opentelemetry.io/collector/consumer v0.108.1
 	go.opentelemetry.io/collector/exporter v0.108.1

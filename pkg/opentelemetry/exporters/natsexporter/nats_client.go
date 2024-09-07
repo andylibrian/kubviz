@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 // JetStreamConnection represents a connection to NATS JetStream.
@@ -22,40 +22,23 @@ type JetStream struct {
 	StreamName   string              // The name of the JetStream stream.
 	Conn         JetStreamConnection // The JetStream connection.
 	Subscription *nats.Subscription  // NATS subscription for consuming messages.
-	channel      chan any            // A channel for enqueuing messages.
-	logger       *logrus.Logger      // A logger for logging messages and errors.
+	logger       *zap.Logger         // A logger for logging messages and errors.
 }
 
 // NewJetstream creates and returns a new JetStream instance.
-//
-// Parameters:
-//   - logger: A logger for logging messages and errors.
-//   - url: The NATS server URL.
-//   - options: NATS options for connecting to the server.
-//   - streamName: The name of the JetStream stream.
-//
-// Returns:
-//   - *JetStream: The new JetStream instance.
-//   - error: An error if there is any issue creating the JetStream instance.
-func NewJetstream(logger *logrus.Logger, url string, options []nats.Option, streamName string) (*JetStream, error) {
-	channel := make(chan any, 1000)
+func NewJetstream(logger *zap.Logger, url string, options []nats.Option, streamName string) *JetStream {
 	return &JetStream{
 		URL:        url,
 		Options:    options,
 		StreamName: streamName,
-		channel:    channel,
 		logger:     logger,
-	}, nil
+	}
 }
 
 // Connect establishes a connection to NATS JetStream.
-//
-// Returns:
-//   - error: An error if there is any issue connecting to NATS JetStream.
 func (j *JetStream) Connect() error {
 	nc, err := nats.Connect(j.URL, j.Options...)
 	if err != nil {
-		j.logger.WithError(err).Error("failed to connect to NATS server")
 		return fmt.Errorf("nats: jetstream connect: failed to connect to NATS server: %w", err)
 	}
 
@@ -63,12 +46,12 @@ func (j *JetStream) Connect() error {
 
 	jetStreamContext, err := nc.JetStream()
 	if err != nil {
-		j.logger.WithError(err).Error("failed to get JetStream context")
 		return fmt.Errorf("nats: jetstream connect: failed to get JetStream context: %w", err)
 	}
 
 	j.logger.Info("successfully got JetStream context")
 	j.Conn = JetStreamConnection{NATSConn: nc, JSContext: jetStreamContext}
+
 	return nil
 }
 
@@ -108,29 +91,23 @@ func (j *JetStream) CreateStreamIfNotExist(streamConfig nats.StreamConfig) error
 
 	streamInfo, err := j.Conn.JSContext.StreamInfo(j.StreamName)
 	if streamInfo != nil && err == nil {
-		j.logger.WithField("stream", j.StreamName).Info("stream already exists, skipping creation")
+		j.logger.Info("stream already exists, skipping creation", zap.String("stream", j.StreamName))
 		return nil
 	}
 
 	if err != nil && err != nats.ErrStreamNotFound {
-		j.logger.WithFields(logrus.Fields{
-			"stream": j.StreamName,
-			"error":  err,
-		}).Warn("error calling JetStream StreamInfo")
+		j.logger.Warn("error calling JetStream StreamInfo", zap.String("stream", j.StreamName), zap.Error(err))
 	}
 
-	j.logger.WithFields(logrus.Fields{
-		"stream": j.StreamName,
-		"config": streamConfig,
-	}).Info("creating stream")
+	j.logger.Info("jetstream: creating stream", zap.String("stream", j.StreamName), zap.Any("config", streamConfig))
 
 	_, err = j.Conn.JSContext.AddStream(&streamConfig)
 	if err != nil {
-		errStr := fmt.Errorf("error while creating stream %s. %s", j.StreamName, err)
-		return fmt.Errorf("nats: jetstream CreateStreamIfNotExist: %w", errStr)
+		return fmt.Errorf("jetstream CreateStreamIfNotExist: error while creating stream: %s. %w", j.StreamName, err)
 	}
 
-	j.logger.WithField("stream", j.StreamName).Info("stream created")
+	j.logger.Info("jetstream: stream created", zap.String("stream", j.StreamName))
+
 	return nil
 }
 
@@ -163,15 +140,12 @@ func (j *JetStream) CreateSubscription() error {
 
 // Publish publishes a protobuf message to the JetStream stream.
 //
-// Parameters:
-//   - queuedMessage: The protobuf message to be published.
-//
 // Returns:
 //   - error: An error if there is any issue publishing the message.
 func (j *JetStream) Publish(data []byte) error {
 	err := j.publishWithRetry(j.StreamName, data)
 	if err != nil {
-		return fmt.Errorf("nats: jetstream publish: failed to publish message: %w", err)
+		return fmt.Errorf("jetstream: failed to publish: %w", err)
 	}
 
 	return nil
@@ -187,38 +161,29 @@ func (j *JetStream) publishWithRetry(subject string, data []byte) error {
 			return nil
 		}
 
-		j.logger.Warn("Publish attempt failed")
-		j.logger.WithError(err).Warnf("Publish attempt %d failed", i+1)
+		j.logger.Warn("jetstream: publish attempt failed", zap.Int("attempt", i+1), zap.Error(err))
 
 		time.Sleep(RetryInterval)
 	}
+
 	return err
 }
 
 // NextMessage retrieves the next message from the JetStream queue and unmarshals it into the provided protobuf message.
-//
-// Parameters:
-//   - message: A protobuf message where the retrieved message will be unmarshaled.
-//
-// Returns:
-//   - proto.Message: The unmarshaled protobuf message.
-//   - error: An error if there is any issue retrieving or unmarshaling the message.
 func (j *JetStream) NextMessage() ([]byte, error) {
 	msg, err := j.Subscription.NextMsg(1 * time.Hour)
 	if errors.Is(err, nats.ErrTimeout) {
-		return nil, fmt.Errorf("nats: jetstream NextMessage: no message in the queue until the timeout is reached: %w", err)
-	}
-	if err != nil {
 		return nil, err
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("jetstream: error while getting the next message: %w", err)
 	}
 
 	err = msg.Ack()
 	if err != nil {
-		j.logger.WithError(err).Error("failed to ack message")
+		return nil, fmt.Errorf("jetstream: failed to ack message: %w", err)
 	}
 
-	if err != nil {
-		return nil, fmt.Errorf("nats: jetstream NextMessage: failed to unmarshal message: %w", err)
-	}
 	return msg.Data, nil
 }
