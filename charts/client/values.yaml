@@ -83,6 +83,13 @@ affinity: {}
 externalSecrets:
   create: false
 
+otelCollector:
+  image:
+    repository: localhost:5000/kubviz-otel-collector
+    pullPolicy: Always
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "v1.1.9"
+
 nats:
   enabled: true
   #Authentication setup
