@@ -5,3 +5,4 @@ cpu.pprof
 steps-to-test.txt
 Dockerfile-grphqlserver-build
 vendor
+kubviz_agent

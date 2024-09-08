@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "client.fullname" . }}-otel-collector
+  labels:
+    app: {{ include "client.fullname" . }}-otel-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "client.fullname" . }}-otel-collector
+  template:
+    metadata:
+      labels:
+        app: {{ include "client.fullname" . }}-otel-collector
+    spec:
+      containers:
+      - name: otel-collector
+        image: localhost:5000/kubviz-otel-collector
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: otel-collector-config
+          mountPath: /etc/kubviz-otelcol-config
+        ports:
+          - name: otlp-grpc
+            containerPort: 4137
+            protocol: TCP
+          - containerPort: 55678
+            protocol: TCP
+          - containerPort: 55679
+            protocol: TCP
+      volumes:
+      - name: otel-collector-config
+        configMap:
+          name: {{ include "client.fullname" . }}-otel-collector-config
+ 
