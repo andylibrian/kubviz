@@ -101,7 +101,8 @@ spec:
             value: {{ .Values.opentelemetry.url }}
           - name : APPLICATION_NAME
             value : {{ .Values.opentelemetry.appName }}
-         
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: grpc://kubviz-client-otel-collector:4317
           volumeMounts:
           {{- if .Values.mtls.enabled }}    
           - name: mtls
