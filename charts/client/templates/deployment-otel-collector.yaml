@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
       - name: otel-collector
-        image: localhost:5000/kubviz-otel-collector
-        imagePullPolicy: Always
+        image: "{{ .Values.otelCollector.image.repository }}:{{ .Values.otelCollector.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.otelCollector.image.pullPolicy }}
         volumeMounts:
         - name: otel-collector-config
           mountPath: /etc/kubviz-otelcol-config
