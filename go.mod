@@ -1,6 +1,8 @@
 module github.com/intelops/kubviz
 
-go 1.22
+go 1.22.6
+
+toolchain go1.23.0
 
 require (
 	bou.ke/monkey v1.0.2
@@ -11,6 +13,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/corneliusweig/tabwriter v0.0.0-20190512204542-5f8a091e83b5
 	github.com/davecgh/go-spew v1.1.1
+	github.com/dgraph-io/dgo/v240 v240.0.0
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/docker v24.0.4+incompatible
 	github.com/genuinetools/reg v0.16.1
@@ -40,6 +43,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.29.0
 	go.opentelemetry.io/otel/log v0.5.0
 	go.opentelemetry.io/otel/sdk v1.29.0
+	go.opentelemetry.io/otel/sdk/log v0.5.0
 	golang.org/x/term v0.23.0
 	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.3
@@ -144,7 +148,6 @@ require (
 	github.com/xlab/treeprint v1.1.0 // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
 	go.opentelemetry.io/otel/metric v1.29.0 // indirect
-	go.opentelemetry.io/otel/sdk/log v0.5.0 // indirect
 	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
@@ -163,8 +166,8 @@ require (
 	google.golang.org/api v0.126.0 // indirect
 	google.golang.org/genproto v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240822170219-fc7c04adadcd // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240822170219-fc7c04adadcd // indirect
-	google.golang.org/grpc v1.65.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240827150818-7e3bb234dfed // indirect
+	google.golang.org/grpc v1.66.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
