@@ -22,6 +22,7 @@ import (
 
 	"github.com/intelops/kubviz/agent/config"
 	"github.com/intelops/kubviz/agent/kubviz/plugins/events"
+	"github.com/intelops/kubviz/agent/kubviz/plugins/kubeallresources"
 
 	"github.com/intelops/kubviz/agent/kubviz/plugins/ketall"
 	"github.com/intelops/kubviz/agent/kubviz/plugins/kubepreupgrade"
@@ -140,6 +141,8 @@ func main() {
 		err := outdated.OutDatedImages(config, js)
 		events.LogErr(err)
 		err = kubepreupgrade.KubePreUpgradeDetector(config, js)
+		events.LogErr(err)
+		err = kubeallresources.PublishAllResources(config)
 		events.LogErr(err)
 		err = ketall.GetAllResources(config, js)
 		events.LogErr(err)
