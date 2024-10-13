@@ -16,6 +16,7 @@ exporters:
     token: 
     url: nats://kubviz-client-nats:4222
     stream_name: kubviz-otel
+    subject_name: kubviz-otel
 
 service:
   pipelines:

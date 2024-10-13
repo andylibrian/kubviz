@@ -11,6 +11,7 @@ import (
 
 type natsExporter struct {
 	conf           *Config
+	subjectName    string
 	logger         *zap.Logger
 	logsMarshaller LogsMarshaler
 	jetStream      *JetStream
@@ -22,7 +23,7 @@ func (n *natsExporter) consumeLogs(ctx context.Context, logs plog.Logs) error {
 		return err
 	}
 
-	err = n.jetStream.Publish(marshalled)
+	err = n.jetStream.Publish(n.subjectName, marshalled)
 	if err != nil {
 		return err
 	}

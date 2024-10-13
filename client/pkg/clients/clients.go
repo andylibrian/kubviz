@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/dgraph-io/dgo/v240"
 	"github.com/intelops/kubviz/client/pkg/clickhouse"
 	"github.com/intelops/kubviz/client/pkg/config"
 	"github.com/intelops/kubviz/pkg/mtlsnats"
@@ -18,7 +19,7 @@ type NATSContext struct {
 	dbClient clickhouse.DBInterface
 }
 
-func NewNATSContext(conf *config.Config, dbClient clickhouse.DBInterface) (*NATSContext, error) {
+func NewNATSContext(conf *config.Config, dbClient clickhouse.DBInterface, dgraphClient *dgo.Dgraph) (*NATSContext, error) {
 	log.Println("Waiting before connecting to NATS at:", conf.NatsAddress)
 	time.Sleep(1 * time.Second)
 
@@ -81,7 +82,7 @@ func NewNATSContext(conf *config.Config, dbClient clickhouse.DBInterface) (*NATS
 	if err != nil {
 		return nil, fmt.Errorf("kubeviz metrics stream not found %w", err)
 	}
-	ctx.SubscribeAllKubvizNats(dbClient)
+	ctx.SubscribeAllKubvizNats(dbClient, dgraphClient)
 
 	return ctx, nil
 }

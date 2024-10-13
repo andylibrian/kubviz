@@ -149,6 +149,8 @@ spec:
                 key: {{ .Values.existingClickhouse.secret.passwordkey }}
             {{- end }}
       {{- end }}
+          - name: DGRAPH_GRPC_ADDRESS
+            value: {{ .Values.dgraph.grpc_address }}
           - name: DB_PORT
             value: "9000"
           - name: TTL_INTERVAL
@@ -161,6 +163,8 @@ spec:
             value: {{ .Values.opentelemetry.url }}
           - name : APPLICATION_NAME
             value : {{ .Values.opentelemetry.appName }}
+          - name : KUBEALLRESOURCES_EVENTS_CONSUMER
+            value : {{ .Values.consumer.kubeallresourcesconsumer }}
           - name : KETALL_EVENTS_CONSUMER
             value : {{ .Values.consumer.ketallconsumer }}
           - name : RAKEES_METRICS_CONSUMER

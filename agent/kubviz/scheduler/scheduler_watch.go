@@ -3,6 +3,7 @@ package scheduler
 import (
 	"github.com/intelops/kubviz/agent/kubviz/plugins/events"
 	"github.com/intelops/kubviz/agent/kubviz/plugins/ketall"
+	"github.com/intelops/kubviz/agent/kubviz/plugins/kubeallresources"
 	"github.com/intelops/kubviz/agent/kubviz/plugins/kubepreupgrade"
 	"github.com/nats-io/nats.go"
 	"k8s.io/client-go/kubernetes"
@@ -17,6 +18,11 @@ import (
 type OutDatedImagesJob struct {
 	config    *rest.Config
 	js        nats.JetStreamContext
+	frequency string
+}
+
+type KubeAllResourcesJob struct {
+	config    *rest.Config
 	frequency string
 }
 
@@ -121,6 +127,23 @@ func (j *OutDatedImagesJob) Run() {
 	err := outdated.OutDatedImages(j.config, j.js)
 	events.LogErr(err)
 }
+
+func NewKubeAllResourcesJob(config *rest.Config, frequency string) (*KubeAllResourcesJob, error) {
+	return &KubeAllResourcesJob{
+		config:    config,
+		frequency: frequency,
+	}, nil
+}
+func (v *KubeAllResourcesJob) CronSpec() string {
+	return v.frequency
+}
+
+func (j *KubeAllResourcesJob) Run() {
+	// Call the Ketall function with the provided config and js
+	err := kubeallresources.PublishAllResources(j.config)
+	events.LogErr(err)
+}
+
 func NewKetallJob(config *rest.Config, js nats.JetStreamContext, frequency string) (*KetallJob, error) {
 	return &KetallJob{
 		config:    config,

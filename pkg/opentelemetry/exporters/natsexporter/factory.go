@@ -71,7 +71,7 @@ func newNatsExporter(conf *Config, logger *zap.Logger) NatsExporter {
 
 	streamConfig := nats.StreamConfig{
 		Name:      streamName,
-		Subjects:  []string{streamName},
+		Subjects:  []string{conf.SubjectName},
 		Retention: nats.LimitsPolicy,
 		Discard:   nats.DiscardOld,
 		Storage:   nats.FileStorage,
@@ -87,5 +87,6 @@ func newNatsExporter(conf *Config, logger *zap.Logger) NatsExporter {
 		logger:         logger,
 		logsMarshaller: logsMarshaler,
 		jetStream:      js,
+		subjectName:    conf.SubjectName,
 	}
 }
