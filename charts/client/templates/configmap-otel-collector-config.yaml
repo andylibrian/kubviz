@@ -21,7 +21,7 @@ data:
       nats:
         token: {{ .Values.nats.auth.token }}
         url: nats://{{ include "client.fullname" . }}-nats:4222
-        stream_name: kubviz-otel
+        stream_name: METRICS.kubeallresources
 
     service:
       pipelines:

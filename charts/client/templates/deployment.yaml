@@ -161,6 +161,8 @@ spec:
             value: {{ .Values.opentelemetry.url }}
           - name : APPLICATION_NAME
             value : {{ .Values.opentelemetry.appName }}
+          - name : KUBEALLRESOURCES_EVENTS_CONSUMER
+            value : {{ .Values.consumer.kubeallresourcesconsumer }}
           - name : KETALL_EVENTS_CONSUMER
             value : {{ .Values.consumer.ketallconsumer }}
           - name : RAKEES_METRICS_CONSUMER

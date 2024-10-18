@@ -194,6 +194,7 @@ opentelemetry:
   appName: "kubviz"
 
 consumer:
+  kubeallresourcesconsumer: "KUBEALLRESOURCES_EVENTS_CONSUMER"
   ketallconsumer: "KETALL_EVENTS_CONSUMER"
   rakeesconsumer: "RAKEES_METRICS_CONSUMER"
   outdatedconsumer: "OUTDATED_EVENTS_CONSUMER"

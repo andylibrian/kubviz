@@ -13,6 +13,7 @@ const (
 	EventSubject_rakees           = "METRICS.rakees"
 	EventSubject_deleted          = "METRICS.deletedAPI"
 	EventSubject_depricated       = "METRICS.deprecatedAPI"
+	KubeAllResourcesSubject       = "METRICS.kubeallresources"
 	KetallSubject                 = "METRICS.ketall"
 	KetallConsumer                = "KETALL_EVENTS_CONSUMER"
 	RakeesSubject                 = "METRICS.rakees"

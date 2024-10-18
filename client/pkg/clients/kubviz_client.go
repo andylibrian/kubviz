@@ -6,16 +6,18 @@ import (
 	"log"
 
 	"github.com/intelops/kubviz/constants"
+	"github.com/intelops/kubviz/model"
 	"github.com/intelops/kubviz/pkg/opentelemetry"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/kuberhealthy/kuberhealthy/v2/pkg/health"
 	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/intelops/kubviz/client/pkg/clickhouse"
 	"github.com/intelops/kubviz/client/pkg/config"
-	"github.com/intelops/kubviz/model"
+	"go.opentelemetry.io/collector/pdata/plog"
 )
 
 type SubscriptionInfo struct {
@@ -35,9 +37,8 @@ func (n *NATSContext) SubscribeAllKubvizNats(conn clickhouse.DBInterface) {
 	if err := envconfig.Process("", cfg); err != nil {
 		log.Fatalf("Could not parse env Config: %v", err)
 	}
-	subscribe := func(sub SubscriptionInfo) {
-		n.stream.Subscribe(sub.Subject, sub.Handler, nats.Durable(sub.Consumer), nats.ManualAck())
-	}
+
+	plogUnmarshaller := &plog.JSONUnmarshaler{}
 
 	subscriptions := []SubscriptionInfo{
 		{
@@ -207,10 +208,56 @@ func (n *NATSContext) SubscribeAllKubvizNats(conn clickhouse.DBInterface) {
 				log.Println()
 			},
 		},
+		{
+			Subject:  constants.KubeAllResourcesSubject,
+			Consumer: cfg.KubeAllResourcesConsumer,
+			Handler: func(msg *nats.Msg) {
+				msg.Ack()
+
+				logs, err := plogUnmarshaller.UnmarshalLogs(msg.Data)
+				if err != nil {
+					// logger.WithError(err).Error("error while unmarshalling logs")
+					log.Println("error while unmarshalling logs")
+					return
+				}
+
+				rls := logs.ResourceLogs()
+				for i := 0; i < rls.Len(); i++ {
+					rl := rls.At(i)
+					sls := rl.ScopeLogs()
+					for j := 0; j < sls.Len(); j++ {
+						sl := sls.At(j)
+						logRecords := sl.LogRecords()
+						for k := 0; k < logRecords.Len(); k++ {
+							logRecord := logRecords.At(k)
+
+							// Print log body
+							logRecordBody := logRecord.Body().AsString()
+
+							// Print attributes
+							// attrs := logRecord.Attributes()
+							// attrs.Range(func(k string, v pcommon.Value) bool {
+							// 	fmt.Printf("Attribute - %s: %v\n", k, v.AsString())
+							// 	return true
+							// })
+							var k8sUnstructured unstructured.Unstructured
+							err := json.Unmarshal([]byte(logRecordBody), &k8sUnstructured)
+							if err != nil {
+								log.Println(err)
+								continue
+							}
+
+							log.Printf("NATSContext.KubeAllResourcesConsumer: Received k8s unstructured: %#v,", logRecordBody)
+							log.Println("-----")
+						}
+					}
+				}
+			},
+		},
 	}
 
 	for _, sub := range subscriptions {
 		log.Printf("Creating nats consumer %s with subject: %s \n", sub.Consumer, sub.Subject)
-		subscribe(sub)
+		n.stream.Subscribe(sub.Subject, sub.Handler, nats.Durable(sub.Consumer), nats.ManualAck())
 	}
 }
