@@ -142,8 +142,8 @@ func (j *JetStream) CreateSubscription() error {
 //
 // Returns:
 //   - error: An error if there is any issue publishing the message.
-func (j *JetStream) Publish(data []byte) error {
-	err := j.publishWithRetry(j.StreamName, data)
+func (j *JetStream) Publish(subject string, data []byte) error {
+	err := j.publishWithRetry(subject, data)
 	if err != nil {
 		return fmt.Errorf("jetstream: failed to publish: %w", err)
 	}

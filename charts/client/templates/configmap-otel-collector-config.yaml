@@ -21,7 +21,8 @@ data:
       nats:
         token: {{ .Values.nats.auth.token }}
         url: nats://{{ include "client.fullname" . }}-nats:4222
-        stream_name: METRICS.kubeallresources
+        stream_name: METRICS
+        subject_name: METRICS.kubeallresources
 
     service:
       pipelines:

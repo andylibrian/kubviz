@@ -17,22 +17,22 @@ import (
 	"github.com/intelops/kubviz/pkg/mtlsnats"
 	"github.com/intelops/kubviz/pkg/opentelemetry"
 
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	"github.com/intelops/kubviz/agent/config"
 	"github.com/intelops/kubviz/agent/kubviz/plugins/events"
-	"github.com/intelops/kubviz/agent/kubviz/plugins/kubeallresources"
-
 	"github.com/intelops/kubviz/agent/kubviz/plugins/ketall"
+	"github.com/intelops/kubviz/agent/kubviz/plugins/kubeallresources"
 	"github.com/intelops/kubviz/agent/kubviz/plugins/kubepreupgrade"
-
-	"github.com/intelops/kubviz/agent/kubviz/plugins/kuberhealthy"
 	"github.com/intelops/kubviz/agent/kubviz/plugins/kubescore"
 	"github.com/intelops/kubviz/agent/kubviz/plugins/outdated"
 	"github.com/intelops/kubviz/agent/kubviz/plugins/rakkess"
-
 	"github.com/intelops/kubviz/agent/kubviz/plugins/trivy"
+
+	"github.com/intelops/kubviz/agent/kubviz/plugins/kuberhealthy"
+
 	"github.com/intelops/kubviz/agent/kubviz/scheduler"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
@@ -41,6 +41,9 @@ import (
 
 	"github.com/intelops/kubviz/agent/server"
 	//_ "k8s.io/client-go/plugin/pkg/client/auth/openstack"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -74,8 +77,9 @@ func main() {
 		log.Fatal("Failed to retrieve agent configurations", err)
 	}
 	var (
-		config    *rest.Config
-		clientset *kubernetes.Clientset
+		config        *rest.Config
+		clientset     *kubernetes.Clientset
+		dynamicClient *dynamic.DynamicClient
 	)
 
 	var mtlsConfig mtlsnats.MtlsConfig
@@ -114,13 +118,26 @@ func main() {
 			log.Fatal(err)
 		}
 		clientset = events.GetK8sClient(config)
+		dynamicClient, err = dynamic.NewForConfig(config)
+		if err != nil {
+			log.Fatal(err)
+		}
 	} else {
 		config, err = rest.InClusterConfig()
 		if err != nil {
 			log.Fatal(err)
 		}
 		clientset = events.GetK8sClient(config)
+		dynamicClient, err = dynamic.NewForConfig(config)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
+
+	// Create a REST mapper
+	discoveryClient := discovery.NewDiscoveryClientForConfigOrDie(config)
+	cachedDiscoveryClient := memory.NewMemCacheClient(discoveryClient)
+	restMapper := restmapper.NewDeferredDiscoveryRESTMapper(cachedDiscoveryClient)
 
 	tp, err := opentelemetry.InitTracer()
 	if err != nil {
@@ -132,7 +149,8 @@ func main() {
 		}
 	}()
 
-	go events.PublishMetrics(clientset, js, clusterMetricsChan)
+	go events.PublishMetrics(clientset, dynamicClient, restMapper, js, clusterMetricsChan)
+
 	if cfg.KuberHealthyEnable {
 		go kuberhealthy.StartKuberHealthy(js)
 	}

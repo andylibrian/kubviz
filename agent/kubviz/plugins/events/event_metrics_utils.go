@@ -18,8 +18,12 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -29,7 +33,7 @@ var ClusterName string = os.Getenv("CLUSTER_NAME")
 
 // publishMetrics publishes stream of events
 // with subject "METRICS.created"
-func PublishMetrics(clientset *kubernetes.Clientset, js nats.JetStreamContext, errCh chan error) {
+func PublishMetrics(clientset *kubernetes.Clientset, dynamicClient *dynamic.DynamicClient, restMapper meta.RESTMapper, js nats.JetStreamContext, errCh chan error) {
 
 	ctx := context.Background()
 	tracer := otel.Tracer("kubviz-publish-metrics")
@@ -37,7 +41,7 @@ func PublishMetrics(clientset *kubernetes.Clientset, js nats.JetStreamContext, e
 	span.SetAttributes(attribute.String("kubviz-agent", "publish-metrics"))
 	defer span.End()
 
-	watchK8sEvents(clientset, js)
+	watchK8sEvents(clientset, dynamicClient, restMapper, js)
 	errCh <- nil
 }
 
@@ -165,7 +169,7 @@ func LogErr(err error) {
 		log.Println(err)
 	}
 }
-func watchK8sEvents(clientset *kubernetes.Clientset, js nats.JetStreamContext) {
+func watchK8sEvents(clientset *kubernetes.Clientset, dynamicClient *dynamic.DynamicClient, restMapper meta.RESTMapper, js nats.JetStreamContext) {
 
 	ctx := context.Background()
 	tracer := otel.Tracer("kubviz-watch-k8sevents")
@@ -179,6 +183,7 @@ func watchK8sEvents(clientset *kubernetes.Clientset, js nats.JetStreamContext) {
 		v1.NamespaceAll,
 		fields.Everything(),
 	)
+
 	_, controller := cache.NewInformer(
 		watchlist,
 		&v1.Event{},
@@ -194,6 +199,16 @@ func watchK8sEvents(clientset *kubernetes.Clientset, js nats.JetStreamContext) {
 				for _, image := range images {
 					publishK8sMetrics(string(event.ObjectMeta.UID), "ADD", event, js, image)
 				}
+
+				unstructuredObj, err := getUnstructuredObject(dynamicClient, restMapper, event.InvolvedObject)
+				if err != nil {
+					log.Printf("Error getting unstructured object: %v", err)
+					return
+				}
+
+				// TODO: send as OTEL log
+				fmt.Println("watchK8sEvents AddFunc:")
+				fmt.Println(unstructuredObj)
 			},
 			DeleteFunc: func(obj interface{}) {
 				event := obj.(*v1.Event)
@@ -226,4 +241,17 @@ func watchK8sEvents(clientset *kubernetes.Clientset, js nats.JetStreamContext) {
 	for {
 		time.Sleep(time.Second)
 	}
+}
+
+func getUnstructuredObject(dynamicClient dynamic.Interface, restMapper meta.RESTMapper, involvedObject v1.ObjectReference) (*unstructured.Unstructured, error) {
+	gvk := schema.FromAPIVersionAndKind(involvedObject.APIVersion, involvedObject.Kind)
+
+	mapping, err := restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get REST mapping: %v", err)
+	}
+
+	gvr := mapping.Resource
+
+	return dynamicClient.Resource(gvr).Namespace(involvedObject.Namespace).Get(context.TODO(), involvedObject.Name, metav1.GetOptions{})
 }
