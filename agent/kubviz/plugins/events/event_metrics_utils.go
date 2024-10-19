@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	kubevizotel "github.com/intelops/kubviz/agent/kubviz/otel"
 	"github.com/intelops/kubviz/constants"
 	"github.com/intelops/kubviz/model"
 	"github.com/intelops/kubviz/pkg/opentelemetry"
@@ -59,8 +58,6 @@ func publishK8sMetrics(id string, mtype string, mdata *v1.Event, js nats.JetStre
 	}
 	metricsJson, _ := json.Marshal(metrics)
 	_, err := js.Publish(constants.EventSubject, metricsJson)
-
-	kubevizotel.PublishEventLog(constants.EventSubject, metricsJson)
 
 	if err != nil {
 		return true, err
