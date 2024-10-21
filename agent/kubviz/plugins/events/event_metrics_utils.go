@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	kubevizotel "github.com/intelops/kubviz/agent/kubviz/otel"
 	"github.com/intelops/kubviz/constants"
 	"github.com/intelops/kubviz/model"
 	"github.com/intelops/kubviz/pkg/opentelemetry"
@@ -200,15 +201,21 @@ func watchK8sEvents(clientset *kubernetes.Clientset, dynamicClient *dynamic.Dyna
 					publishK8sMetrics(string(event.ObjectMeta.UID), "ADD", event, js, image)
 				}
 
+				// Publish to OTEL logs
 				unstructuredObj, err := getUnstructuredObject(dynamicClient, restMapper, event.InvolvedObject)
 				if err != nil {
-					log.Printf("Error getting unstructured object: %v", err)
+					log.Printf("Error getting unstructured object: %v\n", err)
 					return
 				}
 
-				// TODO: send as OTEL log
-				fmt.Println("watchK8sEvents AddFunc:")
-				fmt.Println(unstructuredObj)
+				err = publishUnstructuredObject(unstructuredObj)
+				if err != nil {
+					log.Printf("Error publishing unstructured object as OTEL log: %v\n", err)
+					return
+				}
+
+				// fmt.Println("watchK8sEvents AddFunc:")
+				// fmt.Println(unstructuredObj)
 			},
 			DeleteFunc: func(obj interface{}) {
 				event := obj.(*v1.Event)
@@ -254,4 +261,14 @@ func getUnstructuredObject(dynamicClient dynamic.Interface, restMapper meta.REST
 	gvr := mapping.Resource
 
 	return dynamicClient.Resource(gvr).Namespace(involvedObject.Namespace).Get(context.TODO(), involvedObject.Name, metav1.GetOptions{})
+}
+
+func publishUnstructuredObject(obj *unstructured.Unstructured) error {
+	objJson, err := json.Marshal(obj)
+	if err != nil {
+		return err
+	}
+
+	kubevizotel.PublishEventLog(constants.EventSubject_kubeallresources, objJson)
+	return nil
 }

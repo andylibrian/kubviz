@@ -3,6 +3,7 @@ package kubeallresources
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/intelops/kubviz/constants"
@@ -28,7 +29,6 @@ func PublishAllResources(config *rest.Config) error {
 	span.SetAttributes(attribute.String("kubeallresources-plugin-agent", "kubeallresources-output"))
 	defer span.End()
 
-	// TODO: upto this uncomment for production
 	// Create a new discovery client to discover all resources in the cluster
 	dc := discovery.NewDiscoveryClientForConfigOrDie(config)
 
@@ -51,14 +51,14 @@ func PublishAllResources(config *rest.Config) error {
 		// List all resources in the group
 		list, err := dynamicClient.Resource(gvr).Namespace("").List(context.Background(), metav1.ListOptions{})
 		if err != nil {
-			// fmt.Printf("Error listing %s: %v\n", gvr.String(), err)
+			fmt.Printf("Error listing %s: %v\n", gvr.String(), err)
 			continue
 		}
 
 		for _, item := range list.Items {
 			err := publishUnstructuredObject(&item)
 			if err != nil {
-				// TODO: log
+				fmt.Println("error while publishing unstructured object", err)
 				continue
 			}
 		}

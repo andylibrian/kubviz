@@ -17,7 +17,13 @@ import (
 
 	"github.com/intelops/kubviz/client/pkg/clickhouse"
 	"github.com/intelops/kubviz/client/pkg/config"
+	"github.com/intelops/kubviz/client/pkg/dgraph"
+	"github.com/intelops/kubviz/client/pkg/kubernetes"
 	"go.opentelemetry.io/collector/pdata/plog"
+
+	"github.com/dgraph-io/dgo/v240"
+	"github.com/dgraph-io/dgo/v240/protos/api"
+	"google.golang.org/grpc"
 )
 
 type SubscriptionInfo struct {
@@ -39,6 +45,28 @@ func (n *NATSContext) SubscribeAllKubvizNats(conn clickhouse.DBInterface) {
 	}
 
 	plogUnmarshaller := &plog.JSONUnmarshaler{}
+
+	// K8s Dgraph
+	// TODO: export to config
+	dgraphGrpcEndpoint := "dgraph-public:9080"
+
+	// Initialize Dgraph client
+	grpcConn, err := grpc.Dial(dgraphGrpcEndpoint, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Error connecting to Dgraph: %v", err)
+	}
+	defer conn.Close()
+	dgraphClient := dgo.NewDgraphClient(api.NewDgraphClient(grpcConn))
+
+	// Setup schema
+	err = dgraph.SetupDgraphSchema(ctx, dgraphClient)
+	if err != nil {
+		log.Fatalf("Failed to set up Dgraph schema: %v", err)
+	}
+
+	// Create a new repository instance
+	repo := dgraph.NewDgraphKubernetesResourceRepository(dgraphClient)
+	relationshipRepo := dgraph.NewDgraphRelationshipRepository(dgraphClient)
 
 	subscriptions := []SubscriptionInfo{
 		{
@@ -247,8 +275,38 @@ func (n *NATSContext) SubscribeAllKubvizNats(conn clickhouse.DBInterface) {
 								continue
 							}
 
-							log.Printf("NATSContext.KubeAllResourcesConsumer: Received k8s unstructured: %#v,", logRecordBody)
-							log.Println("-----")
+							// log.Printf("NATSContext.KubeAllResourcesConsumer: Received k8s unstructured: %#v,", logRecordBody)
+							// log.Printf("NATSContext.KubeAllResourcesConsumer: Received k8s object: kind:%s, namespace:%s, name:%s\n\n", k8sUnstructured.GetKind(), k8sUnstructured.GetNamespace(), k8sUnstructured.GetName())
+							// log.Println("-----")
+
+							dgraphResource, err := kubernetes.ConvertUnstructuredToDgraphResource(&k8sUnstructured)
+							if err != nil {
+								log.Println(err)
+								continue
+							}
+
+							// Save to Dgraph
+							err = repo.Save(ctx, dgraphResource)
+							if err != nil {
+								log.Println(err)
+								continue
+							}
+
+							// Debug
+							// dgraphResourceJSON, _ := json.Marshal(dgraphResource)
+							// log.Printf("Saved resource to Dgraph: %s\n", string(dgraphResourceJSON))
+							// log.Println("-----")
+
+							relationships := kubernetes.BuildRelationships(&k8sUnstructured)
+							err = relationshipRepo.Save(ctx, dgraphResource.MetadataUID, relationships)
+							if err != nil {
+								log.Println("Failed to update relationships", err)
+								continue
+							}
+
+							// Debug
+							// relationshipsJSON, _ := json.Marshal(relationships)
+							// log.Printf("Saved relationships to Dgraph: %s\n", string(relationshipsJSON))
 						}
 					}
 				}
