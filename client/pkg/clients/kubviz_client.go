@@ -22,8 +22,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog"
 
 	"github.com/dgraph-io/dgo/v240"
-	"github.com/dgraph-io/dgo/v240/protos/api"
-	"google.golang.org/grpc"
 )
 
 type SubscriptionInfo struct {
@@ -32,7 +30,7 @@ type SubscriptionInfo struct {
 	Handler  func(msg *nats.Msg)
 }
 
-func (n *NATSContext) SubscribeAllKubvizNats(conn clickhouse.DBInterface) {
+func (n *NATSContext) SubscribeAllKubvizNats(conn clickhouse.DBInterface, dgraphClient *dgo.Dgraph) {
 
 	ctx := context.Background()
 	tracer := otel.Tracer("kubviz-client")
@@ -45,24 +43,6 @@ func (n *NATSContext) SubscribeAllKubvizNats(conn clickhouse.DBInterface) {
 	}
 
 	plogUnmarshaller := &plog.JSONUnmarshaler{}
-
-	// K8s Dgraph
-	// TODO: export to config
-	dgraphGrpcEndpoint := "dgraph-public:9080"
-
-	// Initialize Dgraph client
-	grpcConn, err := grpc.Dial(dgraphGrpcEndpoint, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("Error connecting to Dgraph: %v", err)
-	}
-	defer conn.Close()
-	dgraphClient := dgo.NewDgraphClient(api.NewDgraphClient(grpcConn))
-
-	// Setup schema
-	err = dgraph.SetupDgraphSchema(ctx, dgraphClient)
-	if err != nil {
-		log.Fatalf("Failed to set up Dgraph schema: %v", err)
-	}
 
 	// Create a new repository instance
 	repo := dgraph.NewDgraphKubernetesResourceRepository(dgraphClient)

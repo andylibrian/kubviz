@@ -131,6 +131,9 @@ existingClickhouse:
     # usernamekey: ""
     # passwordkey: ""
 
+dgraph:
+  grpc_address: dgraph-public:9080
+
 grafana:
   enabled: false
   plugins:

@@ -8,15 +8,19 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/dgraph-io/dgo/v240"
+	"github.com/dgraph-io/dgo/v240/protos/api"
 	"github.com/intelops/kubviz/client/pkg/clickhouse"
 	"github.com/intelops/kubviz/client/pkg/clients"
 	"github.com/intelops/kubviz/client/pkg/config"
+	"github.com/intelops/kubviz/client/pkg/dgraph"
 	"github.com/intelops/kubviz/client/pkg/storage"
 	"github.com/intelops/kubviz/pkg/opentelemetry"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/robfig/cron/v3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"google.golang.org/grpc"
 )
 
 type Application struct {
@@ -66,8 +70,25 @@ func Start() *Application {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// K8s Dgraph
+
+	// Initialize Dgraph client
+	grpcConn, err := grpc.Dial(cfg.DgraphGrpcAddress, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Error connecting to Dgraph: %v", err)
+	}
+	defer conn.Close()
+	dgraphClient := dgo.NewDgraphClient(api.NewDgraphClient(grpcConn))
+
+	// Setup schema
+	err = dgraph.SetupDgraphSchema(ctx, dgraphClient)
+	if err != nil {
+		log.Fatalf("Failed to set up Dgraph schema: %v", err)
+	}
+
 	// Connect to NATS
-	natsContext, err := clients.NewNATSContext(cfg, dbClient)
+	natsContext, err := clients.NewNATSContext(cfg, dbClient, dgraphClient)
 	if err != nil {
 		log.Fatal("Error establishing connection to NATS:", err)
 	}

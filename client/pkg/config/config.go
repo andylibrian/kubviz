@@ -7,6 +7,7 @@ type Config struct {
 	DBAddress                string `envconfig:"DB_ADDRESS"`
 	ClickHouseUsername       string `envconfig:"CLICKHOUSE_USERNAME"`
 	ClickHousePassword       string `envconfig:"CLICKHOUSE_PASSWORD"`
+	DgraphGrpcAddress        string `envconfig:"DGRAPH_GRPC_ADDRESS"`
 	KubeAllResourcesConsumer string `envconfig:"KUBEALLRESOURCES_EVENTS_CONSUMER" required:"true"`
 	KetallConsumer           string `envconfig:"KETALL_EVENTS_CONSUMER" required:"true"`
 	RakeesConsumer           string `envconfig:"RAKEES_METRICS_CONSUMER" required:"true"`
