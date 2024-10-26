@@ -101,8 +101,14 @@ spec:
             value: {{ .Values.opentelemetry.url }}
           - name : APPLICATION_NAME
             value : {{ .Values.opentelemetry.appName }}
+          {{- if .Values.transportV2.enabled }}
           - name: OTEL_EXPORTER_OTLP_ENDPOINT
-            value: {{ .Values.otelCollector.exporterOtlpEndpoint }}
+            value: {{ .Values.transportV2.exporterOtlpEndpoint }}
+          {{- end }}   
+          {{- if .Values.kubeAllResources.enabled }}
+          - name: KUBE_ALL_RESOURCES_ENABLED
+            value: "true"
+          {{- end }}   
           volumeMounts:
           {{- if .Values.mtls.enabled }}    
           - name: mtls

@@ -1,3 +1,4 @@
+{{- if .Values.otelCollector.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -33,4 +34,4 @@ spec:
       - name: otel-collector-config
         configMap:
           name: {{ include "client.fullname" . }}-otel-collector-config
- 
+{{- end }}

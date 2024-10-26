@@ -5,23 +5,21 @@ import (
 	"encoding/json"
 	"log"
 
+	"github.com/dgraph-io/dgo/v240"
+	"github.com/intelops/kubviz/client/pkg/clickhouse"
+	"github.com/intelops/kubviz/client/pkg/config"
+	"github.com/intelops/kubviz/client/pkg/dgraph"
+	"github.com/intelops/kubviz/client/pkg/kubernetes"
 	"github.com/intelops/kubviz/constants"
 	"github.com/intelops/kubviz/model"
 	"github.com/intelops/kubviz/pkg/opentelemetry"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/kuberhealthy/kuberhealthy/v2/pkg/health"
 	"github.com/nats-io/nats.go"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/intelops/kubviz/client/pkg/clickhouse"
-	"github.com/intelops/kubviz/client/pkg/config"
-	"github.com/intelops/kubviz/client/pkg/dgraph"
-	"github.com/intelops/kubviz/client/pkg/kubernetes"
-	"go.opentelemetry.io/collector/pdata/plog"
-
-	"github.com/dgraph-io/dgo/v240"
 )
 
 type SubscriptionInfo struct {
@@ -41,12 +39,6 @@ func (n *NATSContext) SubscribeAllKubvizNats(conn clickhouse.DBInterface, dgraph
 	if err := envconfig.Process("", cfg); err != nil {
 		log.Fatalf("Could not parse env Config: %v", err)
 	}
-
-	plogUnmarshaller := &plog.JSONUnmarshaler{}
-
-	// Create a new repository instance
-	repo := dgraph.NewDgraphKubernetesResourceRepository(dgraphClient)
-	relationshipRepo := dgraph.NewDgraphRelationshipRepository(dgraphClient)
 
 	subscriptions := []SubscriptionInfo{
 		{
@@ -216,7 +208,16 @@ func (n *NATSContext) SubscribeAllKubvizNats(conn clickhouse.DBInterface, dgraph
 				log.Println()
 			},
 		},
-		{
+	}
+
+	if dgraphClient != nil {
+		plogUnmarshaller := &plog.JSONUnmarshaler{}
+
+		// Create a new repository instance
+		repo := dgraph.NewDgraphKubernetesResourceRepository(dgraphClient)
+		relationshipRepo := dgraph.NewDgraphRelationshipRepository(dgraphClient)
+
+		subscriptions = append(subscriptions, SubscriptionInfo{
 			Subject:  constants.KubeAllResourcesSubject,
 			Consumer: cfg.KubeAllResourcesConsumer,
 			Handler: func(msg *nats.Msg) {
@@ -291,7 +292,7 @@ func (n *NATSContext) SubscribeAllKubvizNats(conn clickhouse.DBInterface, dgraph
 					}
 				}
 			},
-		},
+		})
 	}
 
 	for _, sub := range subscriptions {

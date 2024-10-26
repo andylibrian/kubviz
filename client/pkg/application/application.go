@@ -73,18 +73,22 @@ func Start() *Application {
 
 	// K8s Dgraph
 
-	// Initialize Dgraph client
-	grpcConn, err := grpc.Dial(cfg.DgraphGrpcAddress, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("Error connecting to Dgraph: %v", err)
-	}
-	defer conn.Close()
-	dgraphClient := dgo.NewDgraphClient(api.NewDgraphClient(grpcConn))
+	var dgraphClient *dgo.Dgraph
 
-	// Setup schema
-	err = dgraph.SetupDgraphSchema(ctx, dgraphClient)
-	if err != nil {
-		log.Fatalf("Failed to set up Dgraph schema: %v", err)
+	if cfg.DgraphGrpcAddress != "" {
+		// Initialize Dgraph client
+		grpcConn, err := grpc.Dial(cfg.DgraphGrpcAddress, grpc.WithInsecure())
+		if err != nil {
+			log.Fatalf("Error connecting to Dgraph: %v", err)
+		}
+		defer conn.Close()
+		dgraphClient = dgo.NewDgraphClient(api.NewDgraphClient(grpcConn))
+
+		// Setup schema
+		err = dgraph.SetupDgraphSchema(ctx, dgraphClient)
+		if err != nil {
+			log.Fatalf("Failed to set up Dgraph schema: %v", err)
+		}
 	}
 
 	// Connect to NATS

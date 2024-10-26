@@ -149,8 +149,10 @@ spec:
                 key: {{ .Values.existingClickhouse.secret.passwordkey }}
             {{- end }}
       {{- end }}
+      {{- if .Values.dgraph.enabled }}
           - name: DGRAPH_GRPC_ADDRESS
-            value: {{ .Values.dgraph.grpc_address }}
+            value: {{ .Values.dgraph.grpcAddress }}
+      {{- end }}
           - name: DB_PORT
             value: "9000"
           - name: TTL_INTERVAL
