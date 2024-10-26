@@ -267,9 +267,12 @@ opentelemetry:
   url: "otelcollector.local"
   appName: "kubviz"
 
-# TODO: Merge with opentelemetry key above
-otelCollector:
+transportV2:
+  enabled: true
   exporterOtlpEndpoint: grpc://kubviz-client-otel-collector:4317
+
+kubeAllResources:
+  enabled: true
 
 clusterName: "kubviz"
 

@@ -2,9 +2,13 @@
 FROM cgr.dev/chainguard/go:latest AS builder
 
 WORKDIR /workspace
+
 # Copy the Go Modules manifests
-COPY ./ ./
+COPY ./go.mod ./
+COPY ./go.sum ./
 RUN go mod download
+
+COPY ./ ./
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o k8smetrics_client client/main.go

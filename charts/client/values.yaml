@@ -84,6 +84,7 @@ externalSecrets:
   create: false
 
 otelCollector:
+  enabled: true
   image:
     repository: localhost:5000/kubviz-otel-collector
     pullPolicy: Always
@@ -132,7 +133,8 @@ existingClickhouse:
     # passwordkey: ""
 
 dgraph:
-  grpc_address: dgraph-public:9080
+  enabled: true
+  grpcAddress: dgraph-public:9080
 
 grafana:
   enabled: false

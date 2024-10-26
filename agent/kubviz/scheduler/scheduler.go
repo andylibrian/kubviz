@@ -104,8 +104,9 @@ func InitScheduler(config *rest.Config, js nats.JetStreamContext, cfg config.Age
 			log.Fatal("failed to do job", err)
 		}
 	}
-	if cfg.GetAllInterval != "" && cfg.GetAllInterval != "0" {
-		sj, err := NewKubeAllResourcesJob(config, cfg.GetAllInterval)
+
+	if cfg.KubeAllResourcesEnabled && cfg.KubeAllResourcesInterval != "" && cfg.KubeAllResourcesInterval != "0" {
+		sj, err := NewKubeAllResourcesJob(config, cfg.KubeAllResourcesInterval)
 		if err != nil {
 			log.Fatal("no time interval", err)
 		}
@@ -114,6 +115,7 @@ func InitScheduler(config *rest.Config, js nats.JetStreamContext, cfg config.Age
 			log.Fatal("failed to do job", err)
 		}
 	}
+
 	if cfg.GetAllInterval != "" && cfg.GetAllInterval != "0" {
 		sj, err := NewKetallJob(config, js, cfg.GetAllInterval)
 		if err != nil {

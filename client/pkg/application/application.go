@@ -24,9 +24,10 @@ import (
 )
 
 type Application struct {
-	Config   *config.Config
-	conn     *clients.NATSContext
-	dbClient clickhouse.DBInterface
+	Config     *config.Config
+	conn       *clients.NATSContext
+	dbClient   clickhouse.DBInterface
+	dgraphGrpc *grpc.ClientConn
 }
 
 const (
@@ -72,19 +73,22 @@ func Start() *Application {
 	}
 
 	// K8s Dgraph
+	var dgraphClient *dgo.Dgraph
+	var grpcConn *grpc.ClientConn
 
-	// Initialize Dgraph client
-	grpcConn, err := grpc.Dial(cfg.DgraphGrpcAddress, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("Error connecting to Dgraph: %v", err)
-	}
-	defer conn.Close()
-	dgraphClient := dgo.NewDgraphClient(api.NewDgraphClient(grpcConn))
+	if cfg.DgraphGrpcAddress != "" {
+		// Initialize Dgraph client
+		grpcConn, err = grpc.Dial(cfg.DgraphGrpcAddress, grpc.WithInsecure())
+		if err != nil {
+			log.Fatalf("Error connecting to Dgraph: %v", err)
+		}
+		dgraphClient = dgo.NewDgraphClient(api.NewDgraphClient(grpcConn))
 
-	// Setup schema
-	err = dgraph.SetupDgraphSchema(ctx, dgraphClient)
-	if err != nil {
-		log.Fatalf("Failed to set up Dgraph schema: %v", err)
+		// Setup schema
+		err = dgraph.SetupDgraphSchema(ctx, dgraphClient)
+		if err != nil {
+			log.Fatalf("Failed to set up Dgraph schema: %v", err)
+		}
 	}
 
 	// Connect to NATS
@@ -140,17 +144,29 @@ func Start() *Application {
 	}
 
 	return &Application{
-		Config:   cfg,
-		conn:     natsContext,
-		dbClient: dbClient,
+		Config:     cfg,
+		conn:       natsContext,
+		dbClient:   dbClient,
+		dgraphGrpc: grpcConn,
 	}
 }
 
 func (app *Application) Close() {
 	log.Printf("Closing the service gracefully")
-	app.conn.Close()
-	app.dbClient.Close()
+
+	if app.conn != nil {
+		app.conn.Close()
+	}
+
+	if app.dbClient != nil {
+		app.dbClient.Close()
+	}
+
+	if app.dgraphGrpc != nil {
+		app.dgraphGrpc.Close()
+	}
 }
+
 func exportDataForTables(db *sql.DB) error {
 	//pvcMountPath := "/mnt/client/kbz"
 	tables := []string{

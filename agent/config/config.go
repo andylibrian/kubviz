@@ -11,7 +11,8 @@ type AgentConfigurations struct {
 	SANamespace              string `envconfig:"SA_NAMESPACE" default:"default"`
 	SAName                   string `envconfig:"SA_NAME" default:"default"`
 	OutdatedInterval         string `envconfig:"OUTDATED_INTERVAL" default:"0"`
-	KubeAllResources         string `envconfig:"KUBE_ALL_RESOURCES" default:"*/30 * * * *"`
+	KubeAllResourcesInterval string `envconfig:"KUBE_ALL_RESOURCES_INTERVAL" default:"*/30 * * * *"`
+	KubeAllResourcesEnabled  bool   `envconfig:"KUBE_ALL_RESOURCES_ENABLED" default:"true"`
 	GetAllInterval           string `envconfig:"GETALL_INTERVAL" default:"*/30 * * * *"`
 	KubeScoreInterval        string `envconfig:"KUBESCORE_INTERVAL" default:"*/40 * * * *"`
 	RakkessInterval          string `envconfig:"RAKKESS_INTERVAL" default:"*/50 * * * *"`

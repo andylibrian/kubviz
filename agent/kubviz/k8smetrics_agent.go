@@ -160,8 +160,12 @@ func main() {
 		events.LogErr(err)
 		err = kubepreupgrade.KubePreUpgradeDetector(config, js)
 		events.LogErr(err)
-		err = kubeallresources.PublishAllResources(config)
-		events.LogErr(err)
+
+		if cfg.KubeAllResourcesEnabled {
+			err = kubeallresources.PublishAllResources(config)
+			events.LogErr(err)
+		}
+
 		err = ketall.GetAllResources(config, js)
 		events.LogErr(err)
 		err = rakkess.RakeesOutput(config, js)
