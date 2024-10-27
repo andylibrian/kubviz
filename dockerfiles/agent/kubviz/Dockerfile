@@ -11,6 +11,7 @@ RUN go mod download
 COPY ./ ./
 
 RUN gofmt -w -r '"github.com/googleapis/gnostic/OpenAPIv2" -> "github.com/googleapis/gnostic/openapiv2"' /go/pkg/mod/sigs.k8s.io/kustomize/
+
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o kubviz_agent agent/kubviz/*.go
 

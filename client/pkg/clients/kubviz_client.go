@@ -238,6 +238,8 @@ func (n *NATSContext) SubscribeAllKubvizNats(conn clickhouse.DBInterface, dgraph
 						sl := sls.At(j)
 						logRecords := sl.LogRecords()
 						for k := 0; k < logRecords.Len(); k++ {
+							ctx := context.Background()
+
 							logRecord := logRecords.At(k)
 
 							// Print log body
