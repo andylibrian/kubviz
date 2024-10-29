@@ -105,10 +105,8 @@ spec:
           - name: OTEL_EXPORTER_OTLP_ENDPOINT
             value: {{ .Values.transportV2.exporterOtlpEndpoint }}
           {{- end }}   
-          {{- if .Values.kubeAllResources.enabled }}
           - name: KUBE_ALL_RESOURCES_ENABLED
-            value: "true"
-          {{- end }}   
+            value: "{{ .Values.kubeAllResources.enabled }}"
           volumeMounts:
           {{- if .Values.mtls.enabled }}    
           - name: mtls
