@@ -1,0 +1,66 @@
+name: OTEL Collector Docker Image CI
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'charts/**'
+    branches:
+      - 'main'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: ghcr.io
+      GH_URL: https://github.com
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+        with:
+            fetch-depth: 0
+
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - uses: docker/setup-buildx-action@v1
+        name: Set up Docker Buildx
+
+      -
+        name: Login to ghcr registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      -
+        name: Set up Go
+        uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed #5.1.0
+        with:
+          go-version: "1.22"
+          cache: false
+
+      -
+        name: Build OpenTelemetry Collector
+        working-directory: otel-collector
+        run: |
+          curl --proto '=https' --tlsv1.2 -fL -o ocb https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/cmd%2Fbuilder%2Fv0.112.0/ocb_0.112.0_linux_amd64
+          chmod +x ocb
+          ./ocb --config builder-config.yaml
+          cp _build/kubviz-otel-collector .
+
+      -
+        name: Build and push on PR
+        uses: docker/build-push-action@v4
+        if: github.event_name == 'pull_request'
+        with:
+          context: otel-collector
+          file: ./otel-collector/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/otel-collector:pr-${{ github.event.pull_request.number }}
+          build-args: |
+            "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}"
+
